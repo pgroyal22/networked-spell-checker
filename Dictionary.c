@@ -30,25 +30,18 @@ dictionary * read_in_dictionary(char * path){
 
     size_t buffer_size = 1024;
     char * buffer = malloc(sizeof(char) * buffer_size);
-    char * * words = malloc(num_lines*sizeof(char*));
+    char * * words = malloc(num_lines * sizeof(char*));
     for(int i = 0; i < num_lines; i++){
-        words[i] = getline(&buffer, &buffer_size, dictionary_file);
+        getline(&buffer, &buffer_size, dictionary_file);
+        strcpy(words[i], buffer);
     }
 
-    dictionary * dictionaryPtr = malloc(sizeof(dictionary *));
+    dictionary * dictionaryPtr = malloc(sizeof(dictionary));
     dictionaryPtr -> size = num_lines;
     dictionaryPtr -> words = words;
 
     free(buffer);
     return(dictionaryPtr);
-}
-
-bool searchDictionary(dictionary * dictionaryPtr, char * word){
-
-    int i = 0;
-    int k = dictionaryPtr -> size - 1;
-    
-    return binarySearch(dictionaryPtr, i, k, word);
 }
 
 bool binarySearch(dictionary * dictionaryPtr, int l, int r, char * word){
@@ -65,6 +58,14 @@ bool binarySearch(dictionary * dictionaryPtr, int l, int r, char * word){
         }
     }
     return false;
+}
+
+bool searchDictionary(dictionary * dictionaryPtr, char * word){
+
+    int i = 0;
+    int k = dictionaryPtr -> size - 1;
+    
+    return binarySearch(dictionaryPtr, i, k, word);
 }
 
 void freeDictionary(dictionary * dictionaryPtr){
