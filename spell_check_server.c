@@ -11,7 +11,7 @@
 #include "Dictionary.h"
 #include "ConnectionQueue.h"
 
-#define DEFAULT_DICTIONARY "/usr/share/dict/words"
+#define DEFAULT_DICTIONARY "/usr/share/dict/words/american-english"
 
 pthread_mutex_t lock;
 dictionary * dictionaryPtr; 
@@ -65,10 +65,10 @@ int open_listenfd(char * port){
 
 
 void * workerThread(void * arg){
-    char * word[256];
-    char * response[256];
+    char word[256];
+    char response[256];
     while(true){
-        int socket_fd = get(connectionqueuePtr, lock);
+        int socket_fd = get(connectionqueuePtr, &lock);
         while(read(socket_fd, word, 256) > 0){
             if(searchDictionary(dictionaryPtr, word)){
                 strcpy(response, word);
@@ -103,12 +103,21 @@ void spawn_worker_threads(){
 
 int main(int argc, char const *argv[])
 {
+    // control param handling
+    if (argc < 2){
+        controlParams.DICTIONARY = DEFAULT_DICTIONARY;
+    }
+
     // load into dictionary data structure
     char * dictionary_path = controlParams.DICTIONARY;
     dictionary * dictionaryPtr = read_in_dictionary(dictionary_path);
 
     // create a connection queue
-    connectionqueue * connectionQueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE);
+    connectionqueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE);
+
+    // lock initialization
+    pthread_mutex_init(&lock, NULL);
+    printf("%d", pthread_mutex_trylock(&lock));
 
     // network initialization
     int listenfd, connectionfd;
@@ -116,19 +125,19 @@ int main(int argc, char const *argv[])
     struct sockaddr_storage clientaddr;
     socklen_t clientlen = sizeof(struct sockaddr_storage);
     
-
     // create our worker threads
     spawn_worker_threads();
     
+    // start of main thread separation from worker threads
     while(true){
-        if(connectionfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen) < 0){
-            perror('connection error');
+        if((connectionfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen) < 0)){
+            perror("connection error");
             continue;
         }
-
-        put(connectionqueuePtr, connectionfd, lock);
+        put(connectionqueuePtr, connectionfd, &lock);
     }
 
     freeDictionary(dictionaryPtr);
+    pthread_mutex_destroy(&lock);
     exit(EXIT_SUCCESS);
 }

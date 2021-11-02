@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "Dictionary.h"
 #define MAX_WORDS 100000
+#define MAX_WORD_LENGTH 128
 
 struct Dictionary
 {
@@ -11,7 +12,8 @@ struct Dictionary
 };
 
 dictionary * read_in_dictionary(char * path){
-    FILE * dictionary_file = fopen("dictionary_path", "r");
+    printf(path);
+    FILE * dictionary_file = fopen(path, "r");
     if(dictionary_file == NULL){
         perror("dictionary");
         exit(EXIT_FAILURE);
@@ -28,19 +30,17 @@ dictionary * read_in_dictionary(char * path){
     }
     rewind(dictionary_file);
 
-    size_t buffer_size = 1024;
-    char * buffer = malloc(sizeof(char) * buffer_size);
-    char * * words = malloc(num_lines * sizeof(char*));
+    size_t max_word_size = MAX_WORD_LENGTH * sizeof(char);
+    char * * words = calloc(num_lines, max_word_size);
     for(int i = 0; i < num_lines; i++){
-        getline(&buffer, &buffer_size, dictionary_file);
-        strcpy(words[i], buffer);
+        getline(&words[i], &max_word_size, dictionary_file);
+        words[i][strlen(words[i])-1] = '\0';
     }
 
     dictionary * dictionaryPtr = malloc(sizeof(dictionary));
     dictionaryPtr -> size = num_lines;
     dictionaryPtr -> words = words;
 
-    free(buffer);
     return(dictionaryPtr);
 }
 
