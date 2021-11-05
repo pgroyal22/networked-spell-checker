@@ -2,4 +2,7 @@ spell_check_server
 *.zip
 *.tar
 deliverables
-
+*.py
+Dictionary
+ConnectionQueue
+test_words.txt
