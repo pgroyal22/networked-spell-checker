@@ -12,6 +12,8 @@
 #include "ConnectionQueue.h"
 
 #define DEFAULT_DICTIONARY "/usr/share/dict/words/american-english"
+#define DEFAULT_PORT "2107"
+#define DEFAULT_NUM_THREADS 4
 
 pthread_mutex_t lock;
 dictionary * dictionaryPtr; 
@@ -37,7 +39,7 @@ int open_listenfd(char * port){
     getaddrinfo(NULL, port, &hints, &listp);
 
     for(p = listp; p; p = p->ai_next){
-        if((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0){
+        if((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol) < 0)){
             continue; // socket failed
         }
         setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *) &optval, sizeof(int));
@@ -69,6 +71,7 @@ void * workerThread(void * arg){
     char response[256];
     while(true){
         int socket_fd = get(connectionqueuePtr, &lock);
+        printf("this part works"); 
         while(read(socket_fd, word, 256) > 0){
             if(searchDictionary(dictionaryPtr, word)){
                 strcpy(response, word);
@@ -79,6 +82,7 @@ void * workerThread(void * arg){
                 strcat(response, "MISPELLED");
             }
             write(socket_fd, response, 256);
+            printf(response);
         }
         close(socket_fd);
     }
@@ -93,10 +97,14 @@ void spawn_worker_threads(){
     // create an array that holds worker threads
     pthread_t threads[controlParams.N_THREADS];
     // create the worker threads, which begin execution at workerThread function
-    for(size_t i = 0; i < controlParams.N_THREADS; ++i){
+    for(size_t i = 0; i < controlParams.N_THREADS; i++){
         if(pthread_create(&threads[i], NULL, workerThread, NULL) != 0){
         printf("Error: Failed to create thread\n ");
         exit(EXIT_FAILURE);
+        }
+        else{
+        printf("thread created\n");
+        fflush(stdout);
         }
     }
 }
@@ -106,6 +114,8 @@ int main(int argc, char const *argv[])
     // control param handling
     if (argc < 2){
         controlParams.DICTIONARY = DEFAULT_DICTIONARY;
+        controlParams.PORT = DEFAULT_PORT;
+        controlParams.N_THREADS = DEFAULT_NUM_THREADS;
     }
 
     // load into dictionary data structure
@@ -117,11 +127,13 @@ int main(int argc, char const *argv[])
 
     // lock initialization
     pthread_mutex_init(&lock, NULL);
-    printf("%d", pthread_mutex_trylock(&lock));
 
     // network initialization
     int listenfd, connectionfd;
-    listenfd = open_listenfd(controlParams.PORT);
+    if((listenfd = open_listenfd(controlParams.PORT) < 0)){
+        perror("not listening on any ports");
+        exit(EXIT_FAILURE);
+    }
     struct sockaddr_storage clientaddr;
     socklen_t clientlen = sizeof(struct sockaddr_storage);
     
@@ -131,13 +143,16 @@ int main(int argc, char const *argv[])
     // start of main thread separation from worker threads
     while(true){
         if((connectionfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen) < 0)){
-            perror("connection error");
             continue;
+        }
+        else{
+            printf("connection accepted\n");
         }
         put(connectionqueuePtr, connectionfd, &lock);
     }
 
     freeDictionary(dictionaryPtr);
+    freeConnectionQueue(connectionqueuePtr);
     pthread_mutex_destroy(&lock);
     exit(EXIT_SUCCESS);
 }

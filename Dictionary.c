@@ -12,7 +12,6 @@ struct Dictionary
 };
 
 dictionary * read_in_dictionary(char * path){
-    printf(path);
     FILE * dictionary_file = fopen(path, "r");
     if(dictionary_file == NULL){
         perror("dictionary");
