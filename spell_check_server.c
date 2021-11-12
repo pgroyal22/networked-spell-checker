@@ -13,7 +13,7 @@
 
 #define DEFAULT_DICTIONARY "/usr/share/dict/words/american-english"
 #define DEFAULT_PORT "2107"
-#define DEFAULT_NUM_THREADS 1
+#define DEFAULT_NUM_THREADS 4
 
 dictionary * dictionaryPtr; 
 connectionqueue * connectionqueuePtr;
@@ -24,7 +24,7 @@ struct controlParams
     size_t CONNECTION_BUFFER_SIZE;
     size_t N_THREADS;
     char * PORT;
-    // TODO: add parameter for scheduling type for scheduling worker threads 
+    enum priority_mode PRIORITY_MODE;
 }controlParams;
 
 // got from textbook for network initalization
@@ -70,10 +70,11 @@ void * workerThread(void * arg){
     char response[256];
     while(true){
         int socket_fd = get(connectionqueuePtr);
-        memset(word, '\0', sizeof(char));
+        memset(word, '\0', 256);
         printf("%d\n", socket_fd);
         while(read(socket_fd, word, 256) > 0){
             int i = 0;
+            memset(response, '\0', 256);
             while(word[i] != '\000'){
                 if(((word[i] == '\r') || (word[i]) == '\t' || (word[i]) == '\n')){
                     word[i] = '\0';
@@ -91,9 +92,7 @@ void * workerThread(void * arg){
             }
             printf("writing to open socket\n");
             write(socket_fd, response, 256);
-            printf(response);
         }
-        perror("reading from socket");
         close(socket_fd);
     }
 }
@@ -127,6 +126,7 @@ int main(int argc, char const *argv[])
         controlParams.PORT = DEFAULT_PORT;
         controlParams.N_THREADS = DEFAULT_NUM_THREADS;
         controlParams.CONNECTION_BUFFER_SIZE = 10;
+        controlParams.PRIORITY_MODE = FIFO;
     }
 
     // load into dictionary data structure
@@ -134,7 +134,7 @@ int main(int argc, char const *argv[])
     dictionaryPtr = read_in_dictionary(dictionary_path);
 
     // create a connection queue
-    connectionqueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE);
+    connectionqueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE, controlParams.PRIORITY_MODE);
 
     // network initialization
     int listenfd, connectionfd;
@@ -156,7 +156,8 @@ int main(int argc, char const *argv[])
         }
         else{
             printf("connection accepted with fd %d\n", connectionfd);
-            put(connectionqueuePtr, connectionfd);
+            connectionevent connection_event = {connectionfd , rand() % 11};
+            put(connectionqueuePtr, connection_event);
         }
     }
 

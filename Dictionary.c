@@ -60,7 +60,7 @@ bool binarySearch(dictionary * dictionaryPtr, int l, int r, char * word){
 }
 
 bool searchDictionary(dictionary * dictionaryPtr, char * word){
-    printf("checking dictionary");
+    printf("checking dictionary\n");
     int i = 0;
     int k = dictionaryPtr -> size - 1;
     

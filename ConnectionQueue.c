@@ -6,18 +6,19 @@
 
 struct ConnectionQueue
 {
-    int * socket_buffer;
+    connectionevent * socket_buffer;
     int fill_position;
     int use_position;
     int count;
     int max_size;
+    enum priority_mode priority_mode;
 };
 
 pthread_cond_t sockets_available;
 pthread_cond_t space_available; 
 pthread_mutex_t lock;
 
-void put(connectionqueue * queuePtr, int socket_descriptor){
+void put(connectionqueue * queuePtr, connectionevent connection_event){
     pthread_mutex_lock(&lock);
     
     printf("got mutex for putting to queue\n");
@@ -28,10 +29,14 @@ void put(connectionqueue * queuePtr, int socket_descriptor){
     }
     // start of critical section
     printf("putting connection to connection queue\n");
-    queuePtr -> socket_buffer[queuePtr -> fill_position] = socket_descriptor; 
+    queuePtr -> socket_buffer[queuePtr -> fill_position] = connection_event; 
     queuePtr -> fill_position = (queuePtr -> fill_position + 1) % (queuePtr -> max_size);
     queuePtr -> count++;
 
+    if(queuePtr-> priority_mode == HIGHEST){
+        
+    }
+    
     // signals that there is now data available
     pthread_cond_signal(&sockets_available);
     // frees mutex
@@ -50,7 +55,7 @@ int get(connectionqueue * queuePtr){
     
     // start of critical section
     printf("pulling from connection queue\n");
-    int tmp = queuePtr -> socket_buffer[queuePtr -> use_position]; 
+    connectionevent tmp = queuePtr -> socket_buffer[queuePtr -> use_position]; 
     queuePtr -> use_position = (queuePtr -> use_position + 1) % (queuePtr -> max_size);
     queuePtr -> count--;
 
@@ -60,17 +65,18 @@ int get(connectionqueue * queuePtr){
     // frees mutex
     pthread_mutex_unlock(&lock);
     
-    return tmp;
+    return tmp.socket_descriptor;
 }
 
-connectionqueue * makeConnectionQueue(int max_size){
+connectionqueue * makeConnectionQueue(int max_size, enum priority_mode priority_mode){
     connectionqueue * queuePtr = malloc(sizeof(connectionqueue));
-    int * _socket_buffer = malloc(max_size * sizeof(int)); 
+    connectionevent * _socket_buffer = malloc(max_size * sizeof(connectionevent)); 
     queuePtr -> socket_buffer = _socket_buffer; 
     queuePtr -> fill_position = 0;
     queuePtr -> use_position = 0;
     queuePtr -> count = 0;
     queuePtr -> max_size = max_size;
+    queuePtr -> priority_mode = priority_mode;
 
     // condition variable initalization 
     pthread_cond_init(&space_available, NULL);
