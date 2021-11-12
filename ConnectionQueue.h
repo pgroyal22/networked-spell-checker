@@ -3,8 +3,8 @@
 
 typedef struct ConnectionQueue connectionqueue;
 
-void put(connectionqueue * queuePtr, int socket_descriptor, pthread_mutex_t * lock);
-int get(connectionqueue * quePtr, pthread_mutex_t * lock);
+void put(connectionqueue * queuePtr, int socket_descriptor);
+int get(connectionqueue * quePtr);
 
 connectionqueue * makeConnectionQueue(int max_size);
 void freeConnectionQueue(connectionqueue * queuePtr);

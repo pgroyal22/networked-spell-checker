@@ -13,9 +13,8 @@
 
 #define DEFAULT_DICTIONARY "/usr/share/dict/words/american-english"
 #define DEFAULT_PORT "2107"
-#define DEFAULT_NUM_THREADS 4
+#define DEFAULT_NUM_THREADS 1
 
-pthread_mutex_t lock;
 dictionary * dictionaryPtr; 
 connectionqueue * connectionqueuePtr;
 
@@ -70,20 +69,31 @@ void * workerThread(void * arg){
     char word[256];
     char response[256];
     while(true){
-        int socket_fd = get(connectionqueuePtr, &lock);
-        printf("this part works"); 
+        int socket_fd = get(connectionqueuePtr);
+        memset(word, '\0', sizeof(char));
+        printf("%d\n", socket_fd);
         while(read(socket_fd, word, 256) > 0){
+            int i = 0;
+            while(word[i] != '\000'){
+                if(((word[i] == '\r') || (word[i]) == '\t' || (word[i]) == '\n')){
+                    word[i] = '\0';
+                }
+                i++;
+            }
+            printf("read from open socket\n");
             if(searchDictionary(dictionaryPtr, word)){
                 strcpy(response, word);
-                strcat(response, "OK");
+                strcat(response, " OK\n");
             }
             else{
                 strcpy(response, word);
-                strcat(response, "MISPELLED");
+                strcat(response, " MISPELLED\n");
             }
+            printf("writing to open socket\n");
             write(socket_fd, response, 256);
             printf(response);
         }
+        perror("reading from socket");
         close(socket_fd);
     }
 }
@@ -116,17 +126,15 @@ int main(int argc, char const *argv[])
         controlParams.DICTIONARY = DEFAULT_DICTIONARY;
         controlParams.PORT = DEFAULT_PORT;
         controlParams.N_THREADS = DEFAULT_NUM_THREADS;
+        controlParams.CONNECTION_BUFFER_SIZE = 10;
     }
 
     // load into dictionary data structure
     char * dictionary_path = controlParams.DICTIONARY;
-    dictionary * dictionaryPtr = read_in_dictionary(dictionary_path);
+    dictionaryPtr = read_in_dictionary(dictionary_path);
 
     // create a connection queue
     connectionqueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE);
-
-    // lock initialization
-    pthread_mutex_init(&lock, NULL);
 
     // network initialization
     int listenfd, connectionfd;
@@ -142,17 +150,17 @@ int main(int argc, char const *argv[])
     
     // start of main thread separation from worker threads
     while(true){
-        if((connectionfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen) < 0)){
+        connectionfd = accept(listenfd, (struct sockaddr *)&clientaddr, (socklen_t*) &clientlen);
+        if(connectionfd < 0){
             continue;
         }
         else{
-            printf("connection accepted\n");
+            printf("connection accepted with fd %d\n", connectionfd);
+            put(connectionqueuePtr, connectionfd);
         }
-        put(connectionqueuePtr, connectionfd, &lock);
     }
 
     freeDictionary(dictionaryPtr);
     freeConnectionQueue(connectionqueuePtr);
-    pthread_mutex_destroy(&lock);
     exit(EXIT_SUCCESS);
 }

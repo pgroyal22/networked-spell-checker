@@ -46,10 +46,10 @@ dictionary * read_in_dictionary(char * path){
 bool binarySearch(dictionary * dictionaryPtr, int l, int r, char * word){
     if (r>=l){
         int mid = l + (r-l)/2;
-        if (strcmp(dictionaryPtr -> words[mid], word) == 0){
+        if (strcasecmp(dictionaryPtr -> words[mid], word) == 0){
             return(true);
         }
-        else if (strcmp(dictionaryPtr -> words[mid], word) > 0){
+        else if (strcasecmp(dictionaryPtr -> words[mid], word) > 0){
             return binarySearch(dictionaryPtr, l, mid-1, word);
         }
         else{
@@ -60,7 +60,7 @@ bool binarySearch(dictionary * dictionaryPtr, int l, int r, char * word){
 }
 
 bool searchDictionary(dictionary * dictionaryPtr, char * word){
-
+    printf("checking dictionary");
     int i = 0;
     int k = dictionaryPtr -> size - 1;
     
