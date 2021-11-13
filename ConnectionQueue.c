@@ -33,17 +33,13 @@ void put(connectionqueue * queuePtr, connectionevent connection_event){
     queuePtr -> fill_position = (queuePtr -> fill_position + 1) % (queuePtr -> max_size);
     queuePtr -> count++;
 
-    if(queuePtr-> priority_mode == HIGHEST){
-        
-    }
-    
     // signals that there is now data available
     pthread_cond_signal(&sockets_available);
     // frees mutex
     pthread_mutex_unlock(&lock);
 }
 
-int get(connectionqueue * queuePtr){
+connectionevent get(connectionqueue * queuePtr){
     pthread_mutex_lock(&lock);
 
     printf("got mutex for getting from queue\n");
@@ -59,13 +55,15 @@ int get(connectionqueue * queuePtr){
     queuePtr -> use_position = (queuePtr -> use_position + 1) % (queuePtr -> max_size);
     queuePtr -> count--;
 
+    
+
     // signal that queue can accept more sockets, release mutex
     pthread_cond_signal(&space_available);
 
     // frees mutex
     pthread_mutex_unlock(&lock);
     
-    return tmp.socket_descriptor;
+    return tmp;
 }
 
 connectionqueue * makeConnectionQueue(int max_size, enum priority_mode priority_mode){

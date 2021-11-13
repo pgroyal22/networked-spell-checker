@@ -74,10 +74,12 @@ void * workerThread(void * arg){
     char word[MAX_RESPONSE_SIZE];
     char response[MAX_RESPONSE_SIZE];
     while(true){
-        int socket_fd = get(connectionqueuePtr);
+        connectionevent connection_event = get(connectionqueuePtr);
+        int socket_fd = connection_event.socket_descriptor;
         memset(word, '\0', MAX_RESPONSE_SIZE);
         printf("%d\n", socket_fd);
         while(read(socket_fd, word, MAX_RESPONSE_SIZE) > 0){
+
             int i = 0;
             memset(response, '\0', 256);
             while(word[i] != '\000'){
@@ -85,6 +87,9 @@ void * workerThread(void * arg){
                     word[i] = '\0';
                 }
                 i++;
+            }
+            if(strlen(word) == 0){
+                continue;
             }
             printf("read from open socket\n");
             if(searchDictionary(dictionaryPtr, word)){
@@ -110,7 +115,7 @@ void * loggerThread(void * arg){
         exit(EXIT_FAILURE);
     }
 
-    char * response = malloc(MAX_RESPONSE_SIZE * sizeof(int));
+    char * response = malloc(2 * MAX_RESPONSE_SIZE * sizeof(char));
     while(true){
         response = logGet(logPtr);
         response[strlen(response)] = '\0';
@@ -156,13 +161,39 @@ void spawn_log_thread(){
 int main(int argc, char const *argv[])
 {
     // control param handling
-    if (argc < 2){
-        controlParams.DICTIONARY = DEFAULT_DICTIONARY;
-        controlParams.PORT = DEFAULT_PORT;
-        controlParams.N_THREADS = DEFAULT_NUM_THREADS;
-        controlParams.CONNECTION_BUFFER_SIZE = 10;
-        controlParams.PRIORITY_MODE = FIFO;
+    
+    controlParams.DICTIONARY = DEFAULT_DICTIONARY;
+    controlParams.PORT = DEFAULT_PORT;
+    
+    switch (argc){
+        case 6:
+            strcpy(controlParams.PORT, argv[1]);
+            strcpy(controlParams.DICTIONARY, argv[2]);
+            controlParams.CONNECTION_BUFFER_SIZE = atoi(argv[3]);
+            controlParams.N_THREADS = atoi(argv[4]);
+            controlParams.PRIORITY_MODE = atoi(argv[5]);
+            break;
+        case 5:
+            if(atoi(argv[1]) == 0){
+                strcpy(controlParams.DICTIONARY, argv[1]);
+            }
+            else{
+                strcpy(controlParams.PORT, argv[1]);
+            }
+            controlParams.CONNECTION_BUFFER_SIZE = atoi(argv[2]);
+            controlParams.N_THREADS = atoi(argv[3]);
+            controlParams.PRIORITY_MODE = atoi(argv[4]);
+            break;
+        case 4:
+            controlParams.CONNECTION_BUFFER_SIZE = atoi(argv[1]);
+            controlParams.N_THREADS = atoi(argv[2]);
+            controlParams.PRIORITY_MODE = atoi(argv[3]);
+            break;
+        default:
+            printf("invalid argc \n"); 
+            exit(EXIT_FAILURE);
     }
+    
 
     // load into dictionary data structure
     char * dictionary_path = controlParams.DICTIONARY;
@@ -196,7 +227,7 @@ int main(int argc, char const *argv[])
         }
         else{
             printf("connection accepted with fd %d\n", connectionfd);
-            connectionevent connection_event = {connectionfd , rand() % 11};
+            connectionevent connection_event = {connectionfd , rand() % 11, time(NULL)};
             put(connectionqueuePtr, connection_event);
         }
     }
