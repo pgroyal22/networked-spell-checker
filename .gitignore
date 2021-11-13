@@ -1,9 +1,10 @@
 spell_check_server
 *.zip
-*.tar
+*.tar*
 deliverables
 *.py
 Dictionary
 ConnectionQueue
+LogQueue
 test_words.txt
 log.txt

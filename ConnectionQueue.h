@@ -7,13 +7,14 @@ struct ConnectionEvent{
     int priority;
 };
 
-typedef struct ConnectionEvent connectionevent;
-
-typedef struct ConnectionQueue connectionqueue;
 enum priority_mode{
     FIFO = 1,
     HIGHEST = 2
 };
+
+typedef struct ConnectionEvent connectionevent;
+
+typedef struct ConnectionQueue connectionqueue;
 
 void put(connectionqueue * queuePtr, connectionevent connect_event);
 int get(connectionqueue * quePtr);
