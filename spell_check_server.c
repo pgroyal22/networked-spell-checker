@@ -1,3 +1,6 @@
+// is a multi-threaded and networked spell checking server that establishes a connection queue with multiple posix threads to handle 
+// simulataneous connections from clients
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -5,6 +8,7 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <signal.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -29,10 +33,17 @@ struct controlParams
     size_t CONNECTION_BUFFER_SIZE;
     size_t N_THREADS;
     char * PORT;
-    enum priority_mode PRIORITY_MODE;
 }controlParams;
 
-// got from textbook for network initalization
+void handler(int signal){
+    if(signal == SIGINT){
+        freeDictionary(dictionaryPtr);
+        freeConnectionQueue(connectionqueuePtr);
+        kill(0, SIGKILL);
+    }
+}
+
+// textbook example fo  network initialization
 int open_listenfd(char * port){
     struct addrinfo hints, *listp, *p;
     int listenfd, optval = 1; 
@@ -166,14 +177,13 @@ int main(int argc, char const *argv[])
     controlParams.PORT = DEFAULT_PORT;
     
     switch (argc){
-        case 6:
+        case 5:
             strcpy(controlParams.PORT, argv[1]);
             strcpy(controlParams.DICTIONARY, argv[2]);
             controlParams.CONNECTION_BUFFER_SIZE = atoi(argv[3]);
             controlParams.N_THREADS = atoi(argv[4]);
-            controlParams.PRIORITY_MODE = atoi(argv[5]);
             break;
-        case 5:
+        case 4:
             if(atoi(argv[1]) == 0){
                 strcpy(controlParams.DICTIONARY, argv[1]);
             }
@@ -182,12 +192,10 @@ int main(int argc, char const *argv[])
             }
             controlParams.CONNECTION_BUFFER_SIZE = atoi(argv[2]);
             controlParams.N_THREADS = atoi(argv[3]);
-            controlParams.PRIORITY_MODE = atoi(argv[4]);
             break;
-        case 4:
+        case 3:
             controlParams.CONNECTION_BUFFER_SIZE = atoi(argv[1]);
             controlParams.N_THREADS = atoi(argv[2]);
-            controlParams.PRIORITY_MODE = atoi(argv[3]);
             break;
         default:
             printf("invalid argc \n"); 
@@ -200,7 +208,7 @@ int main(int argc, char const *argv[])
     dictionaryPtr = read_in_dictionary(dictionary_path);
 
     // create a connection queue
-    connectionqueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE, controlParams.PRIORITY_MODE);
+    connectionqueuePtr = makeConnectionQueue(controlParams.CONNECTION_BUFFER_SIZE);
 
     logPtr = makeLogQueue(MAX_RESPONSE_ELEMENTS, MAX_RESPONSE_ELEMENTS);
 
@@ -232,7 +240,5 @@ int main(int argc, char const *argv[])
         }
     }
 
-    freeDictionary(dictionaryPtr);
-    freeConnectionQueue(connectionqueuePtr);
     exit(EXIT_SUCCESS);
 }

@@ -66,7 +66,7 @@ connectionevent get(connectionqueue * queuePtr){
     return tmp;
 }
 
-connectionqueue * makeConnectionQueue(int max_size, enum priority_mode priority_mode){
+connectionqueue * makeConnectionQueue(int max_size){
     connectionqueue * queuePtr = malloc(sizeof(connectionqueue));
     connectionevent * _socket_buffer = malloc(max_size * sizeof(connectionevent)); 
     queuePtr -> socket_buffer = _socket_buffer; 
@@ -74,7 +74,6 @@ connectionqueue * makeConnectionQueue(int max_size, enum priority_mode priority_
     queuePtr -> use_position = 0;
     queuePtr -> count = 0;
     queuePtr -> max_size = max_size;
-    queuePtr -> priority_mode = priority_mode;
 
     // condition variable initalization 
     pthread_cond_init(&space_available, NULL);

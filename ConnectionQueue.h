@@ -21,7 +21,7 @@ typedef struct ConnectionQueue connectionqueue;
 void put(connectionqueue * queuePtr, connectionevent connect_event);
 struct ConnectionEvent get(connectionqueue * quePtr);
 
-connectionqueue * makeConnectionQueue(int max_size, enum priority_mode priority_mode);
+connectionqueue * makeConnectionQueue(int max_size);
 void freeConnectionQueue(connectionqueue * queuePtr);
 
 #endif
